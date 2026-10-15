@@ -18,6 +18,10 @@ class RecordNotFoundError(Exception):
     """Raised when an entity is not found in the database."""
     pass
 
+class DependencyConflictError(Exception):
+    """Raised when an entity cannot be deleted due to active dependencies."""
+    pass
+
 class TouristRepository:
     """Repository handling all parameterized SQL operations for Tourist profiles."""
 
@@ -175,7 +179,3 @@ class ContactRepository:
         with get_db_cursor(commit=True) as cur:
             cur.execute(query, (contact_id, tourist_id))
             return cur.fetchone() is not None
-
-class DependencyConflictError(Exception):
-    """Raised when an entity cannot be deleted due to active dependencies."""
-    pass
