@@ -63,13 +63,48 @@ CREATE TABLE emergency_contacts (
 -- Central repository for all distress events, SOS alerts, and accidents.
 -- Priority: 1 (Critical Accident) to 5 (GPS Update)
 -- ============================================================
-
+CREATE TABLE emergency_incidents (
+    incident_id SERIAL PRIMARY KEY,
+    tourist_id INT NOT NULL,
+    incident_type VARCHAR(50) NOT NULL,
+    priority INT NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    latitude DECIMAL(9, 6) NOT NULL,
+    longitude DECIMAL(9, 6) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMPTZ,
+    CONSTRAINT fk_incidents_tourist
+        FOREIGN KEY (tourist_id)
+        REFERENCES tourists (tourist_id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    CONSTRAINT chk_incident_type CHECK (
+        incident_type IN ('CRITICAL_ACCIDENT', 'SOS', 'DANGEROUS_ZONE', 'SAFETY_ALERT', 'GPS_UPDATE')
+    ),
+    CONSTRAINT chk_incident_priority CHECK (priority BETWEEN 1 AND 5),
+    CONSTRAINT chk_incident_status CHECK (
+        status IN ('RECEIVED', 'QUEUED', 'PROCESSING', 'RESOURCE_ASSIGNED', 'RESOLVED', 'FAILED')
+    )
+);
 
 -- ============================================================
 -- 6. EMERGENCY LOGS
 -- Immutable system audit trail capturing scheduling & transactional lifecycle.
 -- ============================================================
-
+CREATE TABLE emergency_logs (
+    log_id SERIAL PRIMARY KEY,
+    incident_id INT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    details TEXT,
+    performed_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_logs_incident
+        FOREIGN KEY (incident_id)
+        REFERENCES emergency_incidents (incident_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
 
 -- ============================================================
 -- 7. RESCUE TEAMS
