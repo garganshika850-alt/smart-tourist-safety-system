@@ -75,18 +75,80 @@ CREATE TABLE emergency_contacts (
 -- 7. RESCUE TEAMS
 -- Personnel units available for dispatch (paramedics, SAR, firefighters).
 -- ============================================================
+CREATE TABLE rescue_teams (
+    team_id SERIAL PRIMARY KEY,
+    team_name VARCHAR(100) NOT NULL,
+    specialization VARCHAR(50) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    current_capacity INT NOT NULL DEFAULT 0,
+    max_capacity INT NOT NULL,
+    contact_number VARCHAR(20) NOT NULL,
+    CONSTRAINT chk_team_specialization CHECK (
+        specialization IN ('MEDICAL', 'SEARCH_AND_RESCUE', 'FIRE', 'GENERAL')
+    ),
+    CONSTRAINT chk_team_status CHECK (
+        status IN ('AVAILABLE', 'BUSY', 'OFF_DUTY')
+    ),
+    CONSTRAINT chk_team_current_capacity CHECK (current_capacity >= 0),
+    CONSTRAINT chk_team_capacity_limits CHECK (
+        max_capacity > 0 AND max_capacity >= current_capacity
+    )
+);
 
 
 -- ============================================================
 -- 8. RESOURCES
 -- Physical emergency equipment and vehicles (ambulances, helicopters).
 -- ============================================================
-
+CREATE TABLE resources (
+    resource_id SERIAL PRIMARY KEY,
+    resource_name VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    current_lat DECIMAL(9, 6),
+    current_lng DECIMAL(9, 6),
+    CONSTRAINT chk_resource_type CHECK (
+        resource_type IN ('AMBULANCE', 'HELICOPTER', 'FIRE_TRUCK', 'RESCUE_BOAT')
+    ),
+    CONSTRAINT chk_resource_status CHECK (
+        status IN ('AVAILABLE', 'ASSIGNED', 'MAINTENANCE', 'OUT_OF_SERVICE')
+    )
+);
 
 -- ============================================================
 -- 9. RESOURCE ASSIGNMENTS
 -- Junction entity tracking resource/team dispatches to emergency incidents.
 -- ============================================================
+CREATE TABLE resource_assignments (
+    assignment_id SERIAL PRIMARY KEY,
+    incident_id INT NOT NULL,
+    resource_id INT,
+    team_id INT,
+    status VARCHAR(30) NOT NULL,
+    assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    released_at TIMESTAMPTZ,
+    CONSTRAINT fk_assignments_incident
+        FOREIGN KEY (incident_id)
+        REFERENCES emergency_incidents (incident_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_assignments_resource
+        FOREIGN KEY (resource_id)
+        REFERENCES resources (resource_id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_assignments_team
+        FOREIGN KEY (team_id)
+        REFERENCES rescue_teams (team_id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
+    CONSTRAINT chk_assignment_target CHECK (
+        resource_id IS NOT NULL OR team_id IS NOT NULL
+    ),
+    CONSTRAINT chk_assignment_status CHECK (
+        status IN ('ASSIGNED', 'EN_ROUTE', 'ON_SITE', 'COMPLETED', 'CANCELLED')
+    )
+);
 
 
 -- Prevent duplicate active assignment of the same physical resource to an incident
